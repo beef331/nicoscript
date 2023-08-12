@@ -1,50 +1,60 @@
 import nicoscript
+import std/[math, strutils]
 
-import std/math
+type 
+  Cursor = object
+    line: int
+    column: int
+  Editor = object
+    cursor: Cursor
+    lines: seq[string]
+    screenPos: int
+
 
 var 
   time*: float32
   posX* = 64
   posY* = 32
+  editor = Editor()
 
 proc update(dt: float32) = 
   time += dt
   
-  if btn(pcLeft):
-    posX -= 1
-  if btn(pcRight):
-    posX += 1
+  if btnpr(pcLeft, 5):
+    dec editor.cursor.column
+  if btnpr(pcRight, 5):
+    inc editor.cursor.column
   
-  if btn(pcUp):
-    posY -= 1
-  if btn(pcDown):
-    posY += 1
+  if btnpr(pcDown, 5):
+    inc editor.cursor.line
+  if btnpr(pcUp, 5):
+    dec editor.cursor.line
+
+
+  editor.cursor.line = clamp(editor.cursor.line, 0, editor.lines.high)
+  editor.cursor.column = clamp(editor.cursor.column, 0, editor.lines[editor.cursor.line].high)
+
+  if editor.cursor.line - editor.screenPos > 12:
+    editor.screenPos = editor.cursor.line - 12
+  if editor.cursor.line <= editor.screenPos:
+    editor.screenPos = editor.cursor.line
+  editor.screenPos = clamp(editor.screenPos, 0, editor.lines.high)
 
 
 proc draw() =
   cls()
-  if btn(pcA):
-    setColor(13)
-  else:
-    setColor(10)
-  circFill(posX,posY + int(sin(time * 5) * 10), 20)
+  for ind in editor.screenPos .. max(editor.screenPos + 12, editor.lines.high):
+    let y = ind - editor.screenPos
+    setColor(3)
+    print($ind, 1, y * 10)
+    setColor(5)
+    print(editor.lines[ind], 10, y * 10)
+  setColor(7)
+  print("_", 10 + editor.cursor.column * 4, (editor.cursor.line - editor.screenPos) * 10 + 1)
 
-  setColor(3)
-  circFill(posX - 6,posY - 6 + int(sin(time * 5) * 10), 3)
-  circFill(posX + 6,posY - 6 + int(sin(time * 5) * 10), 3)
-
-
-  setColor(3)
-  circFill(posX,posY + 10 + int(sin(time * 5) * 10), 2)
-
-
-  setColor(3)
-  circFill(posX + 20,posY + int(sin((time * 5) + Tau / 4) * 4), 10)
-  circFill(posX - 20,posY + int(sin((time * 5) + Tau / 4) * 4), 10)
-
-proc init = discard
-
+proc init =
+  editor.lines = readScript().splitLines
+discard {'a', 'b', 'c'}
 init("appname", "orgname")
-createWindow("hmm", 128, 128, 4, false)
+createWindow("hmm", 256, 256, 4, false)
 run(init, update, draw)
-

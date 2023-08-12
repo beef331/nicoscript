@@ -44,6 +44,10 @@ proc btnImpl(args: VmArgs) {.cdecl.} =
   {.cast(gcSafe).}:
     args.setResult(btn(NicoButton args.getInt(0)))
 
+proc btnprImpl(args: VmArgs) {.cdecl.} =
+  {.cast(gcSafe).}:
+    args.setResult(btnpr(NicoButton args.getInt(0), int args.getInt(1)))
+
 proc btnupImpl(args: VmArgs) {.cdecl.} =
   {.cast(gcSafe).}:
     args.setResult(btnup(NicoButton args.getInt(0)))
@@ -60,6 +64,17 @@ proc createWindowImpl(args: VmArgs) {.cdecl.} =
     setTargetSize args.getInt(1), args.getInt(2)
     setFullscreen(args.getBool(4))
 
+proc printImpl(args: VmArgs) {.cdecl.} =
+  {.cast(gcSafe).}:
+    print($args.getString(0), args.getInt(1), args.getInt(2), args.getInt(3))
+
+let
+  scriptDir = getAppDir() / "script"
+  scriptPath = scriptDir / "script.nim"
+
+proc readScriptImpl(args: VmArgs) {.cdecl.} =
+  {.cast(gcSafe).}:
+    args.setResult(syncio.readFile scriptPath)
 
 const 
   vmProcs* = [
@@ -70,18 +85,19 @@ const
     VmProcSignature(package: "script", name: "rectFill", module: "nicoscript", vmProc: rectFillImpl),
     VmProcSignature(package: "script", name: "setColor", module: "nicoscript", vmProc: setColorImpl),
     VmProcSignature(package: "script", name: "btn", module: "nicoscript", vmProc: btnImpl),
+    VmProcSignature(package: "script", name: "btnpr", module: "nicoscript", vmProc: btnprImpl),
     VmProcSignature(package: "script", name: "btnup", module: "nicoscript", vmProc: btnupImpl),
     VmProcSignature(package: "script", name: "run", module: "nicoscript", vmProc: runImpl),
-    VmProcSignature(package: "script", name: "createWindow", module: "nicoscript", vmProc: createWindowImpl)
+    VmProcSignature(package: "script", name: "createWindow", module: "nicoscript", vmProc: createWindowImpl),
+    VmProcSignature(package: "script", name: "print", module: "nicoscript", vmProc: printImpl),
+    VmProcSignature(package: "script", name: "readScript", module: "nicoscript", vmProc: readScriptImpl),
+
   ]
 
 when isMainModule:
   let theProcs = vmProcs
   addins = VmAddins(procs: cast[ptr UncheckedArray[typeof theProcs[0]]](theProcs.addr), procLen: vmProcs.len)
 
-let
-  scriptDir = getAppDir() / "script"
-  scriptPath = scriptDir / "script.nim"
 
 proc loadTheScript*(addins: VmAddins): WrappedInterpreter =
   let oldDir = getCurrentDir()
@@ -90,11 +106,11 @@ proc loadTheScript*(addins: VmAddins): WrappedInterpreter =
   setCurrentDir oldDir
 
 proc invokeVmInit*() =
-  if intr != nil and draw != nil:
-    discard intr.invoke(draw, [])
+  if intr != nil and init != nil:
+    discard intr.invoke(init, [])
 
 proc invokeVmUpdate*(dt: float32) =
-  if intr != nil and draw != nil:
+  if intr != nil and update != nil:
     discard intr.invoke(update, [newNode dt])
 
 proc invokeVmDraw*() =
@@ -109,6 +125,7 @@ when isMainModule:
 
   proc gameUpdate(dt: float32) =
     if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
+      echo "reload"
       if intr.isNil:
         intr = loadTheScript(addins)
       else:
@@ -116,6 +133,7 @@ when isMainModule:
         intr.reload()
         intr.loadState(saveState)
       if intr != nil:
+        invokeVmInit()
         lastModification = lastMod
     invokeVmUpdate(dt)
 

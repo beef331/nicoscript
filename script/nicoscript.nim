@@ -26,11 +26,17 @@ when defined(nimscript):
   proc setColor*(i: int) = discard
 
   proc btn*(_: NicoButton): bool = discard
+  proc btnpr*(_: NicoButton, _: int = 48): bool = discard
   proc btnUp*(_: NicoButton): bool = discard
 
   proc init*(_, _: string) = discard
   proc createWindow*(windowName: string, width, height, scale: int, fullScreen: bool) = discard
   proc run*(init: proc(){.nimcall.}, update: proc(_: float32){.nimcall.}, draw: proc(){.nimcall.}) = discard
+
+  proc print*(str: string, x, y: int, scale: int = 1) = discard
+  proc readScript*(): string = discard
+  
+
 else:
   import nico
   export nico
