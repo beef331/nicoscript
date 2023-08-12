@@ -93,33 +93,35 @@ proc invokeVmInit*() =
   if intr != nil and draw != nil:
     discard intr.invoke(draw, [])
 
-proc invokeVmRun*() =
+proc invokeVmUpdate*(dt: float32) =
+  if intr != nil and draw != nil:
+    discard intr.invoke(update, [newNode dt])
+
+proc invokeVmDraw*() =
   if intr != nil and draw != nil:
     discard intr.invoke(draw, [])
 
-proc gameInit() =
-  loadFont(0, "font.png")
-  intr = loadTheScript(addins)
-  invokeVmInit()
-
-proc gameUpdate(dt: float32) =
-  if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
-    if intr.isNil:
-      intr = loadTheScript(addins)
-    else:
-      let saveState = intr.saveState()
-      intr.reload()
-      intr.loadState(saveState)
-    if intr != nil:
-      lastModification = lastMod
-
-  if intr != nil and update != nil:
-    discard intr.invoke(update, [newNode dt])
-
-proc gameDraw() =
-  invokeVmRun()
-
 when isMainModule:
+  proc gameInit() =
+    loadFont(0, "font.png")
+    intr = loadTheScript(addins)
+    invokeVmInit()
+
+  proc gameUpdate(dt: float32) =
+    if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
+      if intr.isNil:
+        intr = loadTheScript(addins)
+      else:
+        let saveState = intr.saveState()
+        intr.reload()
+        intr.loadState(saveState)
+      if intr != nil:
+        lastModification = lastMod
+    invokeVmUpdate(dt)
+
+  proc gameDraw() =
+    invokeVmDraw()
+
   nico.init(orgName, appName)
   nico.createWindow(appName, 128, 128, 4, false)
   nico.run(gameInit, gameUpdate, gameDraw)
