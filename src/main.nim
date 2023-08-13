@@ -30,7 +30,7 @@ discard addEventListener do(evt: Event) -> bool:
 {.push cdecl.}
 proc clsImpl(args: VmArgs)  =
   {.cast(gcSafe).}:
-    cls()
+    cls(args.getInt(0))
 
 proc circImpl(args: VmArgs)  =
   {.cast(gcSafe).}:

@@ -1,6 +1,7 @@
 import nicoscript
 import std/[math, strutils, tables]
 
+ 
 type 
   Cursor = object
     line: int
@@ -12,17 +13,19 @@ type
 
 const
   declColour = 2
-  methodColour = 4
+  methodColour = 5
   keywordColour = 12
-  otherColour = 9
+  otherColour = 12
   callColour = 14
   numberColour = 3
-  lineColour = 12
+  lineColour = 2
+  backGroundColour = 0
 
   colours = {
     "var": declColour,
     "let": declColour,
     "const": declColour,
+    "type": declColour,
     "proc": methodColour,
     "func": methodColour,
     "template": methodColour,
@@ -33,14 +36,17 @@ const
     "when": keywordColour,
     "elif": keywordColour,
     "case": keywordColour,
-    "for": keywordColour
+    "for": keywordColour,
+    "import": keywordColour,
+    "except": keywordColour,
+    "from": keywordColour
   }.toTable
 
 
 var 
   posX* = 64
   posY* = 32
-  editor* = Editor()
+  editor*: Editor
 
 proc rows(): int =
   screenHeight() div (fontHeight() + 1) - 1 # screenSize getter
@@ -95,7 +101,7 @@ proc update(dt: float32) =
 
 
 proc draw() =
-  cls()
+  cls(backGroundColour)
 
   let
     digits = 4 
@@ -132,38 +138,17 @@ proc draw() =
       else:
         x += textWidth(tok)
 
-  setColor(7)
+  setColor(1)
   print("_", startX + editor.cursor.column * textWidth(" "), (editor.cursor.line - editor.screenPos) * (fontHeight() + 1) + 1)
 
 proc init =
   startTextInput()
   editor.lines = readScript().splitLines
-  setTargetSize(256, 128)
+  setTargetSize(340, 240)
 
 init("appname", "orgname")
 createWindow("hmm", 256, 256, 4, false)
 run(init, update, draw)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -18,7 +18,7 @@ when defined(nimscript):
     pcBack = "Back"
 
 
-  proc cls*() = discard
+  proc cls*(i: int = 0) = discard
   proc circ*(x, y, z: int) = discard
   proc circFill*(x, y, z: int) = discard
   proc rect*(x1, y1, x2, y2: int) = discard 
