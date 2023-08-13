@@ -7,7 +7,6 @@ type
     line: int
     column: int
   Editor = object
-    cursor: Cursor
     lines: seq[string]
     screenPos: int
 
@@ -18,7 +17,7 @@ const
   otherColour = 12
   callColour = 14
   numberColour = 3
-  lineColour = 2
+  lineColour = 3
   backGroundColour = 0
 
   colours = {
@@ -43,61 +42,74 @@ const
   }.toTable
 
 
-var 
-  posX* = 64
-  posY* = 32
+var
+  cursor*: Cursor
   editor*: Editor
 
+proc selectorHeight: int = fontHeight() + 2
+
 proc rows(): int =
-  screenHeight() div (fontHeight() + 1) - 1 # screenSize getter
+  screenHeight() div (selectorHeight()) - 1 # screenSize getter
 
 proc fileStr(): string =
-  for line in editor.lines:
+  for i, line in editor.lines.pairs:
     result.add line
-    result.add "\n"
+    if i != editor.lines.high:
+      result.add "\n"
 
 proc update(dt: float32) = 
   let glyph = getGlyph()
+
   if glyph.len == 0: 
   
-    if btnpr(pcLeft, 3):
-      dec editor.cursor.column
-    if btnpr(pcRight, 3):
-      inc editor.cursor.column
+    if btnpr(pcLeft, 5):
+      dec cursor.column
+                       
+    if btnpr(pcRight, 5):
+      inc cursor.column
     
-    if btnpr(pcDown, 2):
-      inc editor.cursor.line
-    if btnpr(pcUp, 2):
-      dec editor.cursor.line
+    if btnpr(pcDown, 5):
+      inc cursor.line
+
+    if btnpr(pcUp, 5):
+      dec cursor.line
 
     if btnpr(pcBack, 5):
-      if editor.lines[editor.cursor.line].len == 0:
-        editor.lines.delete(editor.cursor.line)
+      if editor.lines[cursor.line].len == 0:
+        editor.lines.delete(cursor.line)
+        cursor.line = clamp(cursor.line - 1, 0, editor.lines.high)
+        cursor.column = clamp(cursor.column, 0, editor.lines[cursor.line].high)
       else:
-        if editor.cursor.column > 0:
-          editor.lines[editor.cursor.line].delete(editor.cursor.column - 1, editor.cursor.column - 1)
-          dec editor.cursor.column
+        if cursor.column > 0:
+          editor.lines[cursor.line].delete(cursor.column - 1, cursor.column - 1)
+          dec cursor.column
+        else:
+          editor.lines[cursor.line - 1].add editor.lines[cursor.line]
+          editor.lines.delete(cursor.line)                                                                                    
+          cursor.column = editor.lines[cursor.line].len                                                       
 
     if btnpr(pcL1):
       writeFile("script/script.nim", fileStr())
 
     if btnpr(pcStart):
-      editor.lines.insert("", editor.cursor.line + 1)
-      inc editor.cursor.line
+      let slice = editor.lines[cursor.line][cursor.column .. editor.lines[cursor.line].high]
+      editor.lines[cursor.line].setLen(cursor.column)
+      editor.lines.insert(" ".repeat(cursor.column) & slice, cursor.line + 1)
+      inc cursor.line
 
-    editor.cursor.line = clamp(editor.cursor.line, 0, editor.lines.high)
-    editor.cursor.column = clamp(editor.cursor.column, 0, editor.lines[editor.cursor.line].len)
+    cursor.line = clamp(cursor.line, 0, editor.lines.high)
+    cursor.column = clamp(cursor.column, 0, editor.lines[cursor.line].len)
 
-    if editor.cursor.line - editor.screenPos > rows():
-      editor.screenPos = editor.cursor.line - rows()
-    if editor.cursor.line <= editor.screenPos:
-      editor.screenPos = editor.cursor.line
+    if cursor.line - editor.screenPos > rows():
+      editor.screenPos = cursor.line - rows()
+    if cursor.line <= editor.screenPos:
+      editor.screenPos = cursor.line
 
     editor.screenPos = clamp(editor.screenPos, 0, editor.lines.len)
 
   else:
-    editor.lines[editor.cursor.line].insert(glyph, editor.cursor.column)
-    editor.cursor.column += glyph.len
+    editor.lines[cursor.line].insert(glyph, cursor.column)
+    cursor.column += glyph.len
 
 
 proc draw() =
@@ -108,12 +120,14 @@ proc draw() =
     startX = digits * textWidth(" ") + 5
 
   for ind in editor.screenPos .. min(editor.screenPos + rows(), editor.lines.high):
+
     let line = editor.lines[ind]
     var x = startX 
-    let y = (ind - editor.screenPos) * (fontHeight() + 1)
+    let y = (ind - editor.screenPos) * selectorHeight()
     setColor(lineColour)
     print($ind, 1, y)
-    for (tok, isSep)in line.tokenize:
+
+    for (tok, isSep) in line.tokenize:
       if not isSep:
         if tok in colours:
           setColor(colours[tok])
@@ -121,7 +135,7 @@ proc draw() =
           setColor(numberColour)
         else:
           setColor(otherColour)
-        let ind = tok.find'('
+        var ind = tok.find"("
         if ind >= 0:
           setColor(callColour)
           let left = tok[0..ind - 1]
@@ -138,19 +152,14 @@ proc draw() =
       else:
         x += textWidth(tok)
 
-  setColor(1)
-  print("_", startX + editor.cursor.column * textWidth(" "), (editor.cursor.line - editor.screenPos) * (fontHeight() + 1) + 1)
+  setColor(7)
+  print("_", startX + cursor.column * textWidth(" "), (cursor.line - editor.screenPos) * selectorHeight() + 2)
 
 proc init =
   startTextInput()
   editor.lines = readScript().splitLines
-  setTargetSize(340, 240)
+  setTargetSize(400, 240)
 
 init("appname", "orgname")
 createWindow("hmm", 256, 256, 4, false)
 run(init, update, draw)
-
-
-
-
-

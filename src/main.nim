@@ -208,7 +208,6 @@ when isMainModule:
 
   proc gameUpdate(dt: float32) =
     if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
-      echo "reload"
       if intr.isNil:
         intr = loadTheScript(addins)
       else:
@@ -218,6 +217,7 @@ when isMainModule:
       if intr != nil:
         invokeVmInit()
         lastModification = lastMod
+
     invokeVmUpdate(dt)
 
   proc gameDraw() =
