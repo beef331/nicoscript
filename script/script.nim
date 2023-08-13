@@ -1,7 +1,6 @@
 import nicoscript
 import std/[math, strutils, tables]
 
- 
 type 
   Cursor = object
     line: int
@@ -11,7 +10,7 @@ type
     screenPos: int
 
 const
-  declColour = 2
+  declColour = 4
   methodColour = 5
   keywordColour = 12
   otherColour = 12
@@ -118,7 +117,7 @@ proc draw() =
   let
     digits = 4 
     startX = digits * textWidth(" ") + 5
-
+    (errorLine, errMsg) = getErrorMessage()
   for ind in editor.screenPos .. min(editor.screenPos + rows(), editor.lines.high):
 
     let line = editor.lines[ind]
@@ -151,14 +150,17 @@ proc draw() =
           x += textWidth(tok)
       else:
         x += textWidth(tok)
+    if errorLine - 1  == ind:
+      setColor(8)
+      print(errMsg, x + 1 + textWidth("_"), y)
 
-  setColor(7)
+  setColor(12)
   print("_", startX + cursor.column * textWidth(" "), (cursor.line - editor.screenPos) * selectorHeight() + 2)
 
 proc init =
   startTextInput()
   editor.lines = readScript().splitLines
-  setTargetSize(400, 240)
+  setTargetSize(128, 256)
 
 init("appname", "orgname")
 createWindow("hmm", 256, 256, 4, false)

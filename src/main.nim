@@ -13,9 +13,12 @@ when isMainModule:
     init, update, draw: WrappedPnode
     lastModification = fromUnix(0)
     addins: VmAddins
+    errorLine: int
+    errorMessage: string
 
 errorHook = proc(name: cstring, line, col: int, msg: cstring, sev: Severity)  {.cdecl.} =
-  echo fmt"{line}:{col}; {msg}"
+  errorLine = line
+  errorMessage = fmt"{col}: {msg}"
 
 let
   scriptDir = getAppDir() / "script"
@@ -120,6 +123,10 @@ proc writeFileImpl*(args: VmArgs) =
   {.cast(gcSafe).}:
     writeFile($args.getString(0), $args.getString(1))
 
+proc getErrorMessageImpl*(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult(newNode (errorLine, errorMessage))
+
 {.pop.}
 
 const 
@@ -152,7 +159,10 @@ const
     VmProcSignature(package: "script", name: "stopTextInput", module: "nicoscript", vmProc: stopTextInputImpl),
     VmProcSignature(package: "script", name: "getGlyph", module: "nicoscript", vmProc: getGlyphImpl),
 
-    VmProcSignature(package: "stdlib", name: "writeFile", module: "syncio", vmProc: writeFileImpl)
+    VmProcSignature(package: "stdlib", name: "writeFile", module: "syncio", vmProc: writeFileImpl),
+    VmProcSignature(package: "script", name: "getErrorMessage", module: "nicoscript", vmProc: getErrorMessageImpl)
+
+
   ]
 
 when isMainModule:
@@ -167,16 +177,16 @@ proc loadTheScript*(addins: VmAddins): WrappedInterpreter =
   setCurrentDir oldDir
 
 proc invokeVmInit*() =
-  if intr != nil and init != nil:
+  if intr.isValid and init != nil:
     discard intr.invoke(init, [])
 
 proc invokeVmUpdate*(dt: float32) =
-  if intr != nil and update != nil:
+  if intr.isValid and update != nil:
     discard intr.invoke(update, [newNode dt])
   inputedGlyphs = ""
 
 proc invokeVmDraw*() =
-  if intr != nil and draw != nil:
+  if intr.isValid and draw != nil:
     discard intr.invoke(draw, [])
 
 when isMainModule:
@@ -208,13 +218,15 @@ when isMainModule:
 
   proc gameUpdate(dt: float32) =
     if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
-      if intr.isNil:
+      errorMessage = ""
+      errorLine = -1
+      if not intr.isValid:
         intr = loadTheScript(addins)
       else:
         let saveState = intr.saveState()
-        intr.reload()
+        intr.reload(true)
         intr.loadState(saveState)
-      if intr != nil:
+      if intr.isValid:
         invokeVmInit()
         lastModification = lastMod
 

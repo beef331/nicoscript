@@ -48,6 +48,7 @@ when defined(nimscript):
   proc startTextInput*() = discard
   proc stopTextInput*() = discard
   proc getGlyph*(): string = discard
+  proc getErrorMessage*(): (int, string) = discard
   
 
 else:
