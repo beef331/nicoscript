@@ -33,8 +33,21 @@ when defined(nimscript):
   proc createWindow*(windowName: string, width, height, scale: int, fullScreen: bool) = discard
   proc run*(init: proc(){.nimcall.}, update: proc(_: float32){.nimcall.}, draw: proc(){.nimcall.}) = discard
 
+  proc screenWidth*(): int = discard
+  proc screenHeight*(): int = discard
+
+  proc setTargetSize*(x, y: int) = discard
+
   proc print*(str: string, x, y: int, scale: int = 1) = discard
+  proc textWidth*(str: string, scale: int = 1): int = discard
+  proc fontHeight*(): int = discard
+
+
   proc readScript*(): string = discard
+
+  proc startTextInput*() = discard
+  proc stopTextInput*() = discard
+  proc getGlyph*(): string = discard
   
 
 else:

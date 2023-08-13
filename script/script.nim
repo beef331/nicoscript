@@ -12,49 +12,92 @@ type
 
 
 var 
-  time*: float32
   posX* = 64
   posY* = 32
-  editor = Editor()
+  editor* = Editor()
+
+proc rows(): int =
+  screenHeight() div (fontHeight() + 1) - 1 # screenSize getter
+
+proc fileStr(): string =
+  for line in editor.lines:
+    result.add line
+    result.add "\n"
 
 proc update(dt: float32) = 
-  time += dt
+  let glyph = getGlyph()
+  if glyph.len == 0: 
   
-  if btnpr(pcLeft, 5):
-    dec editor.cursor.column
-  if btnpr(pcRight, 5):
-    inc editor.cursor.column
-  
-  if btnpr(pcDown, 5):
-    inc editor.cursor.line
-  if btnpr(pcUp, 5):
-    dec editor.cursor.line
+    if btnpr(pcLeft, 3):
+      dec editor.cursor.column
 
+    if btnpr(pcRight, 3):
+      inc editor.cursor.column
+    
+    if btnpr(pcDown, 3):
+      inc editor.cursor.line
 
-  editor.cursor.line = clamp(editor.cursor.line, 0, editor.lines.high)
-  editor.cursor.column = clamp(editor.cursor.column, 0, editor.lines[editor.cursor.line].high)
+    if btnpr(pcUp, 3):
+      dec editor.cursor.line
 
-  if editor.cursor.line - editor.screenPos > 12:
-    editor.screenPos = editor.cursor.line - 12
-  if editor.cursor.line <= editor.screenPos:
-    editor.screenPos = editor.cursor.line
-  editor.screenPos = clamp(editor.screenPos, 0, editor.lines.high)
+    if btnpr(pcBack, 5):
+      if editor.lines[editor.cursor.line].len == 0:
+        editor.lines.delete(editor.cursor.line)
+      else:
+        if editor.cursor.column > 0:
+          editor.lines[editor.cursor.line].delete(editor.cursor.column - 1, editor.cursor.column - 1)
+          dec editor.cursor.column
+
+    if btnpr(pcL1):
+      writeFile("script/script.nim", fileStr())
+
+    if btnpr(pcStart):
+      editor.lines.insert("", editor.cursor.line + 1)
+      inc editor.cursor.line
+
+    editor.cursor.line = clamp(editor.cursor.line, 0, editor.lines.high)
+    editor.cursor.column = clamp(editor.cursor.column, 0, editor.lines[editor.cursor.line].len)
+
+    if editor.cursor.line - editor.screenPos > rows():
+      editor.screenPos = editor.cursor.line - rows()
+    if editor.cursor.line <= editor.screenPos:
+      editor.screenPos = editor.cursor.line
+
+    editor.screenPos = clamp(editor.screenPos, 0, editor.lines.len)
+
+  else:
+    editor.lines[editor.cursor.line].insert(glyph, editor.cursor.column)
+    editor.cursor.column += glyph.len
 
 
 proc draw() =
   cls()
-  for ind in editor.screenPos .. max(editor.screenPos + 12, editor.lines.high):
+  for ind in editor.screenPos .. min(editor.screenPos + rows(), editor.lines.high):
     let y = ind - editor.screenPos
     setColor(3)
-    print($ind, 1, y * 10)
-    setColor(5)
-    print(editor.lines[ind], 10, y * 10)
+    print($ind, 1, y * (fontHeight() + 1))
+    setColor(8)
+    print(editor.lines[ind], 10, y * (fontHeight() + 1))
   setColor(7)
-  print("_", 10 + editor.cursor.column * 4, (editor.cursor.line - editor.screenPos) * 10 + 1)
+  print("_", 10 + editor.cursor.column * 4, (editor.cursor.line - editor.screenPos) * (fontHeight() + 1) + 1)
 
 proc init =
+  startTextInput()
   editor.lines = readScript().splitLines
-discard {'a', 'b', 'c'}
+  setTargetSize(512, 128)
+
 init("appname", "orgname")
-createWindow("hmm", 256, 256, 4, false)
+createWindow("hmm", 256, 256, 5, false)
 run(init, update, draw)
+
+
+
+
+
+
+
+
+
+
+
+
