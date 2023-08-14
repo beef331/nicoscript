@@ -11,14 +11,15 @@ type
 
 const
   declColour = 4
-  methodColour = 5
-  keywordColour = 12
-  otherColour = 12
+  methodColour = 3
+  keywordColour = 6
+  otherColour = 15
   callColour = 14
   numberColour = 3
+  stringColour = 3
   lineColour = 3
-  backGroundColour = 0
-
+  backGroundColour = 1
+  
   colours = {
     "var": declColour,
     "let": declColour,
@@ -116,7 +117,7 @@ proc draw() =
 
   let
     digits = 4 
-    startX = digits * textWidth(" ") + 5
+    startX = digits * textWidth(" ") + 10
     (errorLine, errMsg) = getErrorMessage()
   for ind in editor.screenPos .. min(editor.screenPos + rows(), editor.lines.high):
 
@@ -125,42 +126,42 @@ proc draw() =
     let y = (ind - editor.screenPos) * selectorHeight()
     setColor(lineColour)
     print($ind, 1, y)
-
-    for (tok, isSep) in line.tokenize:
+    var pos = 0
+    for (tok, _) in line.tokenize(WhiteSpace + {'.', ',', '(', ')', '[', ']', '{', '}', '"', '\'', ':' }):
+      pos += tok.high
+      let 
+        isSep = tok.len == 0 or tok[0] in WhiteSpace
+        canLookAhead = pos < line.len
       if not isSep:
         if tok in colours:
           setColor(colours[tok])
         elif tok.allCharsInSet(Digits):
           setColor(numberColour)
+        elif canLookAhead:
+          case line[pos + 1]
+          of '(', '[', '.', ')', ']', '{', '}':
+            setColor(callColour)
+          of '"', '\'':
+            setColor(stringColour)
+          else:
+            setColor(otherColour)
         else:
           setColor(otherColour)
-        var ind = tok.find"("
-        if ind >= 0:
-          setColor(callColour)
-          let left = tok[0..ind - 1]
-          print(left, x, y)
-          x += textWidth(left)
-          if ind < tok.len:
-            setColor(otherColour)
-            let right  = tok[ind..^1]
-            print(right, x, y)
-            x += textWidth(right)
-        else:
-          print(tok, x, y)
-          x += textWidth(tok)
-      else:
-        x += textWidth(tok)
+      
+      print(tok, x, y)
+      x += textWidth(tok)
+      setColor(otherColour)                   
     if errorLine - 1  == ind:
       setColor(8)
       print(errMsg, x + 1 + textWidth("_"), y)
-
+                                              
   setColor(12)
   print("_", startX + cursor.column * textWidth(" "), (cursor.line - editor.screenPos) * selectorHeight() + 2)
 
 proc init =
   startTextInput()
   editor.lines = readScript().splitLines
-  setTargetSize(128, 256)
+  setTargetSize(500, 256)
 
 init("appname", "orgname")
 createWindow("hmm", 256, 256, 4, false)
