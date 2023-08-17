@@ -120,13 +120,11 @@ proc update(dt: float32) =
     editor.screenPos = clamp(editor.screenPos, 0, editor.lines.len)
 
   else:
-    echo cursor
     if editor.lines[cursor.line].len == 0:
       editor.lines[cursor.line].add glyph
-      cursor.column = glyph.len
     else:
       editor.lines[cursor.line].insert(glyph, cursor.column)
-      cursor.column += glyph.len
+    cursor.column += glyph.len
 
 
 proc draw() =
@@ -147,7 +145,7 @@ proc draw() =
       pos += tok.high
       let
         isSep = tok.len == 0 or tok[0] in WhiteSpace
-        canLookAhead = pos < line.len
+        canLookAhead = pos < line.high
       if not isSep:
         if tok in colours:
           setColor(colours[tok])
