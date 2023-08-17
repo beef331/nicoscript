@@ -15,7 +15,7 @@ const
   keywordColour = 6
   otherColour = 15
   callColour = 14
-  numberColour = 3
+  numberColour = 9
   stringColour = 3
   lineColour = 3
   backGroundColour = 1
@@ -129,6 +129,12 @@ proc update(dt: float32) =
 
 proc draw() =
   cls(backGroundColour)
+  if (cursor.column * textWidth(" ") + textStart()) notin getCamera()[0] .. getCamera()[0] + screenWidth():
+    setCamera(cursor.column * textWidth(" "), 0)
+
+  if (cursor.column * textWidth(" ") + textStart()) < screenWidth():
+    setCamera(0, 0)
+
 
   let
     startX = textStart()
@@ -181,10 +187,10 @@ proc draw() =
 proc init =
   startTextInput()
   editor.lines = readScript().splitLines
-  setTargetSize(500, 256)
+  setTargetSize(512, 240)
 
   loadFont(0, "iosevka.png")
 
 init("appname", "orgname")
-createWindow("hmm", 256, 256, 4, false)
+createWindow("hmm", 256, 256, 5, false)
 run(init, update, draw)

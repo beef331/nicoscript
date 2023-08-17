@@ -43,6 +43,8 @@ when defined(nimscript):
   proc textWidth*(str: string, scale: int = 1): int = discard
   proc fontHeight*(): int = discard
 
+  proc setCamera*(x, y: int) = discard
+  proc getCamera*(): (int, int) = discard
 
   proc readScript*(): string = discard
 

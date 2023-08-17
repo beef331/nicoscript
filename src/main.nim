@@ -19,6 +19,7 @@ when isMainModule:
 errorHook = proc(name: cstring, line, col: int, msg: cstring, sev: Severity)  {.cdecl.} =
   errorLine = line
   errorMessage = fmt"{col}: {msg}"
+  echo errorMessage
 
 let
   scriptDir = getAppDir() / "script"
@@ -159,6 +160,14 @@ proc writeFileImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     writeFile($args.getString(0), $args.getString(1))
 
+proc setCameraImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    setCamera(args.getInt(0), args.getInt(1))
+
+proc getCameraImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult newNode getCamera()
+
 proc getErrorMessageImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     args.setResult(newNode (errorLine, errorMessage))
@@ -185,6 +194,10 @@ const
     VmProcSignature(package: "script", name: "mousebtnp", module: "nicoscript", vmProc: mouseBtnpImpl),
     VmProcSignature(package: "script", name: "mousebtnpr", module: "nicoscript", vmProc: mouseBtnPrImpl),
     VmProcSignature(package: "script", name: "mousewheel", module: "nicoscript", vmProc: mouseWheelImpl),
+
+
+    VmProcSignature(package: "script", name: "setCamera", module: "nicoscript", vmProc: setCameraImpl),
+    VmProcSignature(package: "script", name: "getCamera", module: "nicoscript", vmProc: getCameraImpl),
 
     VmProcSignature(package: "script", name: "run", module: "nicoscript", vmProc: runImpl),
     VmProcSignature(package: "script", name: "createWindow", module: "nicoscript", vmProc: createWindowImpl),
