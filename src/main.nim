@@ -67,6 +67,34 @@ proc btnupImpl(args: VmArgs)  =
   {.cast(gcSafe).}:
     args.setResult(btnup(NicoButton args.getInt(0)))
 
+proc mouseImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult newNode mouse()
+
+proc mouseRelImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult newNode mouseRel()
+
+proc mouseBtnImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult mousebtn(args.getInt(0))
+
+proc mouseBtnupImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult mousebtnUp(args.getInt(0))
+
+proc mouseBtnpImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult mousebtnp(args.getInt(0))
+
+proc mouseBtnPrImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult mousebtnPr(args.getInt(0), args.getInt(1))
+
+proc mouseWheelImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    args.setResult mouseWheel()
+
 proc startTextInputImpl(vmArgs: VmArgs) =
   {.cast(gcSafe).}:
     startTextInput()
@@ -140,6 +168,15 @@ const
     VmProcSignature(package: "script", name: "btn", module: "nicoscript", vmProc: btnImpl),
     VmProcSignature(package: "script", name: "btnpr", module: "nicoscript", vmProc: btnprImpl),
     VmProcSignature(package: "script", name: "btnup", module: "nicoscript", vmProc: btnupImpl),
+
+
+    VmProcSignature(package: "script", name: "mouse", module: "nicoscript", vmProc: mouseImpl),
+    VmProcSignature(package: "script", name: "mouserel", module: "nicoscript", vmProc: mouseRelImpl),
+    VmProcSignature(package: "script", name: "mousebtn", module: "nicoscript", vmProc: mouseBtnImpl),
+    VmProcSignature(package: "script", name: "mousebtnup", module: "nicoscript", vmProc: mouseBtnupImpl),
+    VmProcSignature(package: "script", name: "mousebtnp", module: "nicoscript", vmProc: mouseBtnpImpl),
+    VmProcSignature(package: "script", name: "mousebtnpr", module: "nicoscript", vmProc: mouseBtnPrImpl),
+    VmProcSignature(package: "script", name: "mousewheel", module: "nicoscript", vmProc: mouseWheelImpl),
 
     VmProcSignature(package: "script", name: "run", module: "nicoscript", vmProc: runImpl),
     VmProcSignature(package: "script", name: "createWindow", module: "nicoscript", vmProc: createWindowImpl),

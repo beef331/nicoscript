@@ -1,7 +1,7 @@
 import nicoscript
 import std/[math, strutils, tables]
 
-type 
+type
   Cursor = object
     line: int
     column: int
@@ -19,7 +19,7 @@ const
   stringColour = 3
   lineColour = 3
   backGroundColour = 1
-  
+
   colours = {
     "var": declColour,
     "let": declColour,
@@ -51,23 +51,27 @@ proc selectorHeight: int = fontHeight() + 2
 proc rows(): int =
   screenHeight() div (selectorHeight()) - 1 # screenSize getter
 
+proc textStart(): int =
+  const digits = 4
+  digits * textWidth(" ") + 10
+
 proc fileStr(): string =
   for i, line in editor.lines.pairs:
-    result.add line
+    result.add line.strip(leading = false)
     if i != editor.lines.high:
       result.add "\n"
 
-proc update(dt: float32) = 
+proc update(dt: float32) =
   let glyph = getGlyph()
 
-  if glyph.len == 0: 
-  
+  if glyph.len == 0:
+
     if btnpr(pcLeft, 5):
       dec cursor.column
-                       
+
     if btnpr(pcRight, 5):
       inc cursor.column
-    
+
     if btnpr(pcDown, 5):
       inc cursor.line
 
@@ -85,17 +89,25 @@ proc update(dt: float32) =
           dec cursor.column
         else:
           editor.lines[cursor.line - 1].add editor.lines[cursor.line]
-          editor.lines.delete(cursor.line)                                                                                    
-          cursor.column = editor.lines[cursor.line].len                                                       
+          editor.lines.delete(cursor.line)
+          cursor.column = editor.lines[cursor.line].len
 
     if btnpr(pcL1):
       writeFile("script/script.nim", fileStr())
 
     if btnpr(pcStart):
-      let slice = editor.lines[cursor.line][cursor.column .. editor.lines[cursor.line].high]
-      editor.lines[cursor.line].setLen(cursor.column)
-      editor.lines.insert(" ".repeat(cursor.column) & slice, cursor.line + 1)
-      inc cursor.line
+      if cursor.column > 0:
+        let slice = editor.lines[cursor.line][cursor.column .. editor.lines[cursor.line].high]
+        editor.lines[cursor.line].setLen(cursor.column)
+        editor.lines.insert(" ".repeat(cursor.column) & slice, cursor.line + 1)
+      else:
+        editor.lines.insert("", cursor.line)
+
+    if mouseBtn(0):
+      cursor.line = editor.screenPos + mouse()[1] div selectorHeight()
+      cursor.column = (mouse()[0] - textStart()) div textWidth(" ")
+
+    cursor.line -= mouseWheel()
 
     cursor.line = clamp(cursor.line, 0, editor.lines.high)
     cursor.column = clamp(cursor.column, 0, editor.lines[cursor.line].len)
@@ -108,28 +120,32 @@ proc update(dt: float32) =
     editor.screenPos = clamp(editor.screenPos, 0, editor.lines.len)
 
   else:
-    editor.lines[cursor.line].insert(glyph, cursor.column)
-    cursor.column += glyph.len
+    echo cursor
+    if editor.lines[cursor.line].len == 0:
+      editor.lines[cursor.line].add glyph
+      cursor.column = glyph.len
+    else:
+      editor.lines[cursor.line].insert(glyph, cursor.column)
+      cursor.column += glyph.len
 
 
 proc draw() =
   cls(backGroundColour)
 
   let
-    digits = 4 
-    startX = digits * textWidth(" ") + 10
+    startX = textStart()
     (errorLine, errMsg) = getErrorMessage()
   for ind in editor.screenPos .. min(editor.screenPos + rows(), editor.lines.high):
 
     let line = editor.lines[ind]
-    var x = startX 
+    var x = startX
     let y = (ind - editor.screenPos) * selectorHeight()
     setColor(lineColour)
     print($ind, 1, y)
     var pos = 0
     for (tok, _) in line.tokenize(WhiteSpace + {'.', ',', '(', ')', '[', ']', '{', '}', '"', '\'', ':' }):
       pos += tok.high
-      let 
+      let
         isSep = tok.len == 0 or tok[0] in WhiteSpace
         canLookAhead = pos < line.len
       if not isSep:
@@ -147,14 +163,20 @@ proc draw() =
             setColor(otherColour)
         else:
           setColor(otherColour)
-      
+
+      let tok =
+        if x == startX:
+          tok.replace("  ", "..")
+        else:
+          tok
       print(tok, x, y)
       x += textWidth(tok)
-      setColor(otherColour)                   
+      setColor(otherColour)
+
     if errorLine - 1  == ind:
       setColor(8)
       print(errMsg, x + 1 + textWidth("_"), y)
-                                              
+
   setColor(12)
   print("_", startX + cursor.column * textWidth(" "), (cursor.line - editor.screenPos) * selectorHeight() + 2)
 

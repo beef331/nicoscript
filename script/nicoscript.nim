@@ -49,7 +49,14 @@ when defined(nimscript):
   proc stopTextInput*() = discard
   proc getGlyph*(): string = discard
   proc getErrorMessage*(): (int, string) = discard
-  
+
+  proc mouse*(): (int,int) = discard
+  proc mouserel*(): (float32,float32) = discard
+  proc mousebtn*(b: range[0..2]): bool = discard
+  proc mousebtnup*(b: range[0..2]): bool = discard
+  proc mousebtnp*(b: range[0..2]): bool = discard
+  proc mousebtnpr*(b: range[0..2], r: int = 48): bool = discard
+  proc mousewheel*(): int = discard
 
 else:
   import nico
