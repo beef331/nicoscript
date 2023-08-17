@@ -38,6 +38,7 @@ when defined(nimscript):
 
   proc setTargetSize*(x, y: int) = discard
 
+  proc loadFont*(ind: int, path: string) = discard
   proc print*(str: string, x, y: int, scale: int = 1) = discard
   proc textWidth*(str: string, scale: int = 1): int = discard
   proc fontHeight*(): int = discard

@@ -183,6 +183,8 @@ proc init =
   editor.lines = readScript().splitLines
   setTargetSize(500, 256)
 
+  loadFont(0, "iosevka.png")
+
 init("appname", "orgname")
 createWindow("hmm", 256, 256, 4, false)
 run(init, update, draw)

@@ -135,23 +135,31 @@ proc fontHeightImpl*(args: VmArgs) =
   {.cast(gcSafe).}:
     args.setResult(fontHeight())
 
-proc screenWidthImpl*(args: VmArgs) =
+proc loadFontImpl(args: VmArgs) =
+  {.cast(gcSafe).}:
+    let strPath = $args.getString(1)
+    try:
+      loadFont(args.getInt(0), strPath)
+    except:
+      echo "Could not load: ", strPath
+
+proc screenWidthImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     args.setResult(screenWidth)
 
-proc screenHeightImpl*(args: VmArgs) =
+proc screenHeightImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     args.setResult(screenHeight)
 
-proc setTargetSizeImpl*(args: VmArgs) =
+proc setTargetSizeImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     setTargetSize(args.getInt(0), args.getInt(0))
 
-proc writeFileImpl*(args: VmArgs) =
+proc writeFileImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     writeFile($args.getString(0), $args.getString(1))
 
-proc getErrorMessageImpl*(args: VmArgs) =
+proc getErrorMessageImpl(args: VmArgs) =
   {.cast(gcSafe).}:
     args.setResult(newNode (errorLine, errorMessage))
 
@@ -188,6 +196,8 @@ const
     VmProcSignature(package: "script", name: "print", module: "nicoscript", vmProc: printImpl),
     VmProcSignature(package: "script", name: "textWidth", module: "nicoscript", vmProc: textWidthImpl),
     VmProcSignature(package: "script", name: "fontHeight", module: "nicoscript", vmProc: fontHeightImpl),
+    VmProcSignature(package: "script", name: "loadFont", module: "nicoscript", vmProc: loadFontImpl),
+
 
 
     VmProcSignature(package: "script", name: "readScript", module: "nicoscript", vmProc: readScriptImpl),
