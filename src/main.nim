@@ -4,26 +4,33 @@ import nimscripter/nimscr
 from "$nim"/compiler/nimeval import findNimStdLibCompileTime
 import std/[strformat, os, times]
 
+
+type Environment* = object
+  intr: WrappedInterpreter
+  init, update, draw: WrappedPnode
+  lastModification: Time
+  path*: string
+
 when isMainModule:
   const orgName = "script"
   const appName = "scripter"
 
-  var 
-    intr: WrappedInterpreter
-    init, update, draw: WrappedPnode
-    lastModification = fromUnix(0)
-    addins: VmAddins
+  type State = enum
+    Editing, Playing
+
+  var
     errorLine: int
     errorMessage: string
+    presentState = Editing
+    envs = [
+      Editing: Environment(path: getAppDir() / "script" / "editor.nim"),
+      Playing: Environment(path: getAppDir() / "script" / "script.nim")
+    ]
 
 errorHook = proc(name: cstring, line, col: int, msg: cstring, sev: Severity)  {.cdecl.} =
   errorLine = line
   errorMessage = fmt"{col}: {msg}"
-  echo errorMessage
 
-let
-  scriptDir = getAppDir() / "script"
-  scriptPath = scriptDir / "script.nim"
 var inputedGlyphs: string
 
 discard addEventListener do(evt: Event) -> bool:
@@ -110,9 +117,9 @@ proc getGlyphImpl(vmArgs: VmArgs) =
     
 proc runImpl(args: VmArgs)  =
   {.cast(gcSafe).}:
-    init = args.getNode(0)
-    update = args.getNode(1)
-    draw = args.getNode(2)
+    envs[presentState].init = args.getNode(0)
+    envs[presentState].update = args.getNode(1)
+    envs[presentState].draw = args.getNode(2)
 
 proc createWindowImpl(args: VmArgs)  =
   {.cast(gcSafe).}:
@@ -126,7 +133,7 @@ proc printImpl(args: VmArgs)  =
 
 proc readScriptImpl(args: VmArgs)  =
   {.cast(gcSafe).}:
-    args.setResult(syncio.readFile scriptPath)
+    args.setResult(syncio.readFile envs[Playing].path)
 
 proc textWidthImpl(args: VmArgs) =
   {.cast(gcSafe).}:
@@ -227,34 +234,50 @@ const
 
 when isMainModule:
   let theProcs = vmProcs
-  addins = VmAddins(procs: cast[ptr UncheckedArray[typeof theProcs[0]]](theProcs.addr), procLen: vmProcs.len)
 
-
-proc loadTheScript*(addins: VmAddins): WrappedInterpreter =
-  let oldDir = getCurrentDir()
-  setCurrentDir scriptDir
-  result = loadScript(cstring scriptPath, addins, [cstring scriptDir], cstring findNimStdLibCompileTime(), defaultDefines)
-  setCurrentDir oldDir
 
 proc invokeVmInit*() =
-  if intr.isValid and init != nil:
-    discard intr.invoke(init, [])
+  if envs[presentState].intr.isValid and envs[presentState].init != nil:
+    discard envs[presentState].intr.invoke(envs[presentState].init, [])
 
 proc invokeVmUpdate*(dt: float32) =
-  if intr.isValid and update != nil:
-    discard intr.invoke(update, [newNode dt])
+  if envs[presentState].intr.isValid and envs[presentState].update != nil:
+    discard envs[presentState].intr.invoke(envs[presentState].update, [newNode dt])
   inputedGlyphs = ""
 
 proc invokeVmDraw*() =
-  if intr.isValid and draw != nil:
-    discard intr.invoke(draw, [])
+  if envs[presentState].intr.isValid and envs[presentState].draw != nil:
+    discard envs[presentState].intr.invoke(envs[presentState].draw, [])
+
+proc loadTheScript*(envs: var array[State, Environment]) =
+  let state = presentState
+  for ind, env in envs.mpairs:
+    if not env.intr.isValid:
+      let 
+        oldDir = getCurrentDir()
+        dir = env.path.parentDir
+      setCurrentDir dir
+     
+      let name = env.path.splitFile.name
+
+      var vmProcs =  vmProcs
+      for prc in vmProcs.mitems:
+        if prc.package == "script":
+          prc.package = cstring name
+
+      let addins = VmAddins(procs: cast[ptr UncheckedArray[VmProcSignature]](vmProcs.addr), procLen: vmProcs.len)
+      presentState = ind
+      env.intr = loadScript(env.path, addins, [cstring dir], cstring findNimStdLibCompileTime(), defaultDefines)
+      invokeVmInit()
+    
+
+      setCurrentDir oldDir
 
 when isMainModule:
-  proc gameInit() =
-    loadFont(0, "font.png")
-    intr = loadTheScript(addins)
-    invokeVmInit()
-    keymap =[
+  var 
+    defaultKeyMap: array[NicoButton, seq[ScanCode]]
+  const
+    editorKeymap = [
       @[SCANCODE_LEFT], # left
       @[SCANCODE_RIGHT], # right
       @[SCANCODE_UP], # up
@@ -265,7 +288,7 @@ when isMainModule:
       @[SCANCODE_C], # Y
 
       @[SCANCODE_F1], # L1
-      @[SCANCODE_G], # L2
+      @[SCANCODE_F2], # L2
       @[SCANCODE_H], # L3
 
       @[SCANCODE_V], # R1
@@ -276,25 +299,42 @@ when isMainModule:
       @[SCANCODE_BACKSPACE], # Back
     ]
 
+
+
+  proc gameInit() =
+    loadFont(0, "font.png")
+    envs.loadTheScript()
+    invokeVmInit()
+    defaultKeyMap = keymap
+    keymap = editorKeymap
+    keymap[pcL2] = @[ScanCodeF2]
+
   proc gameUpdate(dt: float32) =
-    if (let lastMod = getLastModificationTime(scriptPath); lastMod) > lastModification:
+    if (let lastMod = getLastModificationTime(envs[presentState].path); lastMod) != envs[presentState].lastModification:
       errorMessage = ""
       errorLine = -1
-      if not intr.isValid:
-        intr = loadTheScript(addins)
+      if not envs[presentState].intr.isValid:
+        envs.loadTheScript()
       else:
-        let saveState = intr.saveState()
-        intr.reload(true)
-        intr.loadState(saveState)
-      if intr.isValid:
+        let saveState = envs[presentState].intr.saveState()
+        envs[presentState].intr.reload(true)
+        envs[presentState].intr.loadState(saveState)
+      if envs[presentState].intr.isValid:
         invokeVmInit()
-        lastModification = lastMod
+        envs[presentState].lastModification = lastMod
+
+    if btnpr(pcL2, 60):
+      case presentState
+      of Editing:
+        presentState = Playing
+      of Playing:
+        presentState = Editing
 
     invokeVmUpdate(dt)
 
   proc gameDraw() =
     invokeVmDraw()
 
-  nico.init(orgName, appName)
-  nico.createWindow(appName, 128, 128, 4, false)
-  nico.run(gameInit, gameUpdate, gameDraw)
+nico.init(orgName, appName)
+nico.createWindow(appName, 128, 128, 4, false)
+nico.run(gameInit, gameUpdate, gameDraw)

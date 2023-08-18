@@ -1,3 +1,6 @@
+proc exitEditMode*() = discard
+proc enterEditorMode*() = discard
+
 when defined(nimscript):
   type NicoButton* = enum
     pcLeft = "Left"
