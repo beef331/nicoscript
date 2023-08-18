@@ -16,15 +16,15 @@ when isMainModule:
   const appName = "scripter"
 
   type State = enum
-    Editing, Playing
+    Playing, Editing
 
   var
     errorLine: int
     errorMessage: string
-    presentState = Editing
+    presentState = Playing
     envs = [
-      Editing: Environment(path: getAppDir() / "script" / "editor.nim"),
-      Playing: Environment(path: getAppDir() / "script" / "script.nim")
+      Playing: Environment(path: getAppDir() / "script" / "script.nim"),
+      Editing: Environment(path: getAppDir() / "editor" / "editor.nim")
     ]
 
 errorHook = proc(name: cstring, line, col: int, msg: cstring, sev: Severity)  {.cdecl.} =
@@ -250,7 +250,7 @@ proc invokeVmDraw*() =
     discard envs[presentState].intr.invoke(envs[presentState].draw, [])
 
 proc loadTheScript*(envs: var array[State, Environment]) =
-  let state = presentState
+  let addins = VmAddins(procs: cast[ptr UncheckedArray[VmProcSignature]](vmProcs.addr), procLen: vmProcs.len)
   for ind, env in envs.mpairs:
     if not env.intr.isValid:
       let 
@@ -260,18 +260,10 @@ proc loadTheScript*(envs: var array[State, Environment]) =
      
       let name = env.path.splitFile.name
 
-      var vmProcs =  vmProcs
-      for prc in vmProcs.mitems:
-        if prc.package == "script":
-          prc.package = cstring name
-
-      let addins = VmAddins(procs: cast[ptr UncheckedArray[VmProcSignature]](vmProcs.addr), procLen: vmProcs.len)
       presentState = ind
-      env.intr = loadScript(env.path, addins, [cstring dir], cstring findNimStdLibCompileTime(), defaultDefines)
-      invokeVmInit()
-    
-
+      env.intr = loadScript(cstring env.path, addins, [cstring dir, cstring getAppDir() / "script"], cstring findNimStdLibCompileTime(), defaultDefines)
       setCurrentDir oldDir
+      invokeVmInit()
 
 when isMainModule:
   var 
@@ -308,6 +300,7 @@ when isMainModule:
     defaultKeyMap = keymap
     keymap = editorKeymap
     keymap[pcL2] = @[ScanCodeF2]
+    presentState = Editing
 
   proc gameUpdate(dt: float32) =
     if (let lastMod = getLastModificationTime(envs[presentState].path); lastMod) != envs[presentState].lastModification:
@@ -329,6 +322,7 @@ when isMainModule:
         presentState = Playing
       of Playing:
         presentState = Editing
+      invokeVmInit()
 
     invokeVmUpdate(dt)
 
